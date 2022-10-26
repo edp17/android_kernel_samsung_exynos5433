@@ -802,7 +802,12 @@ int dhdpcie_init(struct pci_dev *pdev)
 #ifdef CUSTOMER_HW4
 		else {
 			/* Set ramdom MAC address during boot time */
-			get_random_bytes(&bus->dhd->mac.octet[3], 3);
+			/* edp17 - start */
+			/* get_random_bytes(&bus->dhd->mac.octet[3], 3);*/
+			bus->dhd->mac.octet[3] = 1;
+			bus->dhd->mac.octet[4] = 2;
+			bus->dhd->mac.octet[5] = 3;
+			/* edp17 - end */
 			/* Adding BRCM OUI */
 			bus->dhd->mac.octet[0] = 0;
 			bus->dhd->mac.octet[1] = 0x90;
