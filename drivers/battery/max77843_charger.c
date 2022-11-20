@@ -904,7 +904,6 @@ static int max77843_chg_get_property(struct power_supply *psy,
 				val->intval = POWER_SUPPLY_TYPE_MAINS;
 			}
 		}
-		power_supply_changed(&charger->val->intval);
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = max77843_check_battery(charger);
