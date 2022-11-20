@@ -2618,6 +2618,7 @@ continue_monitor:
 		}
 	}
 	power_supply_changed(&battery->psy_bat);
+	power_supply_changed(&battery->psy_usb);
 
 skip_monitor:
 	sec_bat_set_polling(battery);
