@@ -19,7 +19,6 @@
 #include <linux/seq_file.h>
 
 static enum power_supply_property max77843_fuelgauge_props[] = {
-	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_AVG,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
