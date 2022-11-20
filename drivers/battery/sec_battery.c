@@ -2618,7 +2618,6 @@ continue_monitor:
 		}
 	}
 	power_supply_changed(&battery->psy_bat);
-	power_supply_changed(&battery->psy_usb);
 
 skip_monitor:
 	sec_bat_set_polling(battery);
@@ -2806,6 +2805,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	wake_lock(&battery->monitor_wake_lock);
 	queue_delayed_work_on(0, battery->monitor_wqueue, &battery->monitor_work,
 					msecs_to_jiffies(500));
+	power_supply_changed(&battery->psy_usb);
 end_of_cable_work:
 	wake_unlock(&battery->cable_wake_lock);
 	dev_dbg(battery->dev, "%s: End\n", __func__);
