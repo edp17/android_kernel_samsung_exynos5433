@@ -1,3 +1,0 @@
-/home/g7/mer/android/droid/hybris/mw/harbour-fivinarow/build/CMakeFiles/harbour-fivinarow.dir
-/home/g7/mer/android/droid/hybris/mw/harbour-fivinarow/build/CMakeFiles/edit_cache.dir
-/home/g7/mer/android/droid/hybris/mw/harbour-fivinarow/build/CMakeFiles/rebuild_cache.dir
