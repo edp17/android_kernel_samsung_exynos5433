@@ -730,8 +730,11 @@ int dhdpcie_init(struct pci_dev *pdev)
 		}
 #ifdef CUSTOMER_HW4
 		else {
-			/* Set ramdom MAC address during boot time */
-			get_random_bytes(&bus->dhd->mac.octet[3], 3);
+			/* Set deterministic MAC address during boot time */
+			/* Keep wlan0 identity stable until macloader sets real MAC */
+			bus->dhd->mac.octet[3] = 0x47;
+			bus->dhd->mac.octet[4] = 0x4E;
+			bus->dhd->mac.octet[5] = 0x34;
 			/* Adding BRCM OUI */
 			bus->dhd->mac.octet[0] = 0;
 			bus->dhd->mac.octet[1] = 0x90;
