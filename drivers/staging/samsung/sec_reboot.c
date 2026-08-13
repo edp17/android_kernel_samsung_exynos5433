@@ -19,6 +19,8 @@ EXPORT_SYMBOL(mach_restart);
 static void sec_power_off(void)
 {
 	int poweroff_try = 0;
+	unsigned int ps_hold_before;
+	unsigned int ps_hold_after;
 	struct power_supply *ac_psy = power_supply_get_by_name("ac");
 	struct power_supply *usb_psy = power_supply_get_by_name("usb");
 	struct power_supply *wc_psy = power_supply_get_by_name("wireless");
@@ -91,10 +93,19 @@ static void sec_power_off(void)
 			 * PS_HOLD Out/High -->
 			 * Low PS_HOLD_CONTROL, R/W, 0x1002_330C
 			 */
-			writel(readl(EXYNOS_PS_HOLD_CONTROL) & 0xFFFFFEFF,
+			ps_hold_before = readl(EXYNOS_PS_HOLD_CONTROL);
+			pr_emerg("%s: powerkey_gpio=%d state=%d PS_HOLD before=0x%08x try=%d\n",
+				 __func__, powerkey_gpio,
+				 gpio_get_value(powerkey_gpio), ps_hold_before,
+				 poweroff_try);
+
+			writel(ps_hold_before & 0xFFFFFEFF,
 			       EXYNOS_PS_HOLD_CONTROL);
 
+			ps_hold_after = readl(EXYNOS_PS_HOLD_CONTROL);
 			++poweroff_try;
+			pr_emerg("%s: PS_HOLD after=0x%08x poweroff_try=%d -- hardware still running\n",
+				 __func__, ps_hold_after, poweroff_try);
 			pr_emerg
 			    ("%s: Should not reach here! (poweroff_try:%d)\n",
 			     __func__, poweroff_try);
