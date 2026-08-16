@@ -32,12 +32,18 @@
 #define LDI_GRAY	'1'
 #define LDI_WHITE	'2'
 
+#ifdef CONFIG_SENSORS_SSP_TMG399X
+#define PROX_LOW_THRESHOLD	105
+#else
+#define PROX_LOW_THRESHOLD	90
+#endif
+
 #define DEFUALT_HIGH_THRESHOLD	130
-#define DEFUALT_LOW_THRESHOLD	90
+#define DEFUALT_LOW_THRESHOLD	PROX_LOW_THRESHOLD
 #define TBD_HIGH_THRESHOLD	130
-#define TBD_LOW_THRESHOLD	90
+#define TBD_LOW_THRESHOLD	PROX_LOW_THRESHOLD
 #define WHITE_HIGH_THRESHOLD	130
-#define WHITE_LOW_THRESHOLD	90
+#define WHITE_LOW_THRESHOLD	PROX_LOW_THRESHOLD
 
 /*************************************************************************/
 /* factory Sysfs                                                         */
