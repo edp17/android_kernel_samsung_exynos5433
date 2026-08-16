@@ -57,7 +57,7 @@
 			ssp-mag-position = <3>;
 			ssp-sns-combination = <0>;
 			ssp,prox-hi_thresh = <130>;
-			ssp,prox-low_thresh = <90>;
+			ssp,prox-low_thresh = <105>;
 			ssp-ap-rev = <1>;
 			ssp-mag-array = <10196 176 (-21) 516 10378 20 (-774) 1027 9454>; /* Only for YAS532 */
 			ssp-hw-rev = <12>;
