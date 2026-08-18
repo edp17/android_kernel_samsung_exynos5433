@@ -2949,6 +2949,13 @@ SYSCALL_DEFINE2(memfd_create,
 		goto err_fd;
 	}
 	info = SHMEM_I(file->f_path.dentry->d_inode);
+
+	if (flags & MFD_ALLOW_SEALING) {
+		spin_lock(&info->lock);
+		info->seals &= ~F_SEAL_SEAL;
+		spin_unlock(&info->lock);
+	}
+
 	file->f_mode |= FMODE_LSEEK | FMODE_PREAD | FMODE_PWRITE;
 	file->f_flags |= O_RDWR | O_LARGEFILE;
 
