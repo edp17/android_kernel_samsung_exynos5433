@@ -148,6 +148,202 @@ enum mali_error {
 	MALI_ERROR_FUNCTION_FAILED,
 };
 
+/*
+ * Compatibility front-end for the legacy r15p0 UK userspace ABI used by
+ * the Sailfish host graphics stack. Native r22p0 userspace continues to use
+ * the KBASE_IOCTL_* interface below unchanged.
+ *
+ * The supported legacy calls are deliberately limited to the set observed
+ * from the treltexx Sailfish r15p0 libGLES_mali.so during compositor startup
+ * and steady-state rendering.
+ */
+#define KBASE_LEGACY_UK_VERSION_MAJOR	10
+#define KBASE_LEGACY_UK_VERSION_MINOR	6
+#define KBASE_LEGACY_UK_FUNC_ID		512
+#define KBASE_LEGACY_IOCTL_TYPE		0x82
+#define KBASE_LEGACY_VERSION_IOCTL_TYPE	0x80
+#define KBASE_LEGACY_MAX_CALL_SIZE	536
+
+#define KBASE_LEGACY_UKP_FUNC_ID_CHECK_VERSION	0
+
+enum kbase_legacy_uk_func {
+	KBASE_LEGACY_FUNC_MEM_ALLOC =
+		KBASE_LEGACY_UK_FUNC_ID + 0,
+	KBASE_LEGACY_FUNC_MEM_IMPORT =
+		KBASE_LEGACY_UK_FUNC_ID + 1,
+	KBASE_LEGACY_FUNC_MEM_COMMIT =
+		KBASE_LEGACY_UK_FUNC_ID + 2,
+	KBASE_LEGACY_FUNC_MEM_QUERY =
+		KBASE_LEGACY_UK_FUNC_ID + 3,
+	KBASE_LEGACY_FUNC_MEM_FREE =
+		KBASE_LEGACY_UK_FUNC_ID + 4,
+	KBASE_LEGACY_FUNC_SYNC =
+		KBASE_LEGACY_UK_FUNC_ID + 8,
+	KBASE_LEGACY_FUNC_GPU_PROPS_REG_DUMP =
+		KBASE_LEGACY_UK_FUNC_ID + 14,
+	KBASE_LEGACY_FUNC_SET_FLAGS =
+		KBASE_LEGACY_UK_FUNC_ID + 18,
+	KBASE_LEGACY_FUNC_FENCE_VALIDATE =
+		KBASE_LEGACY_UK_FUNC_ID + 23,
+	KBASE_LEGACY_FUNC_STREAM_CREATE =
+		KBASE_LEGACY_UK_FUNC_ID + 24,
+	KBASE_LEGACY_FUNC_JOB_SUBMIT =
+		KBASE_LEGACY_UK_FUNC_ID + 28,
+	KBASE_LEGACY_FUNC_GET_CONTEXT_ID =
+		KBASE_LEGACY_UK_FUNC_ID + 31,
+};
+
+union kbase_legacy_uk_header {
+	u32 id;
+	u32 ret;
+	u64 sizer;
+};
+
+union kbase_legacy_pointer {
+	u32 value;
+	u32 compat_value;
+	u64 sizer;
+};
+
+struct kbase_legacy_version_check {
+	union kbase_legacy_uk_header header;
+	u16 major;
+	u16 minor;
+	u8 padding[4];
+};
+
+struct kbase_legacy_mem_alloc {
+	union kbase_legacy_uk_header header;
+	u64 va_pages;
+	u64 commit_pages;
+	u64 extent;
+	u64 flags;
+	u64 gpu_va;
+	u16 va_alignment;
+	u8 padding[6];
+};
+
+struct kbase_legacy_mem_free {
+	union kbase_legacy_uk_header header;
+	u64 gpu_addr;
+};
+
+struct kbase_legacy_mem_import {
+	union kbase_legacy_uk_header header;
+	union kbase_legacy_pointer phandle;
+	u32 type;
+	u32 padding;
+	u64 flags;
+	u64 gpu_va;
+	u64 va_pages;
+};
+
+struct kbase_legacy_job_submit {
+	union kbase_legacy_uk_header header;
+	union kbase_legacy_pointer addr;
+	u32 nr_atoms;
+	u32 stride;
+	u32 gles_ctx_handle;
+	u32 frame_number;
+	u32 surfacep;
+	u32 padding;
+};
+
+struct kbase_legacy_sync_now {
+	union kbase_legacy_uk_header header;
+	base_syncset sset;
+};
+
+struct kbase_legacy_gpu_core_props {
+	u32 product_id;
+	u16 version_status;
+	u16 minor_revision;
+	u16 major_revision;
+	u16 padding;
+	u32 gpu_speed_mhz;
+	u32 gpu_freq_khz_max;
+	u32 gpu_freq_khz_min;
+	u32 log2_program_counter_size;
+	u32 texture_features[3];
+	u64 gpu_available_memory_size;
+};
+
+struct kbase_legacy_gpu_raw_props {
+	u64 shader_present;
+	u64 tiler_present;
+	u64 l2_present;
+	u64 stack_present;
+	u32 l2_features;
+	u32 suspend_size;
+	u32 mem_features;
+	u32 mmu_features;
+	u32 as_present;
+	u32 js_present;
+	u32 js_features[GPU_MAX_JOB_SLOTS];
+	u32 tiler_features;
+	u32 texture_features[3];
+	u32 gpu_id;
+	u32 thread_max_threads;
+	u32 thread_max_workgroup_size;
+	u32 thread_max_barrier_size;
+	u32 thread_features;
+	u32 coherency_mode;
+};
+
+struct kbase_legacy_gpu_props {
+	struct kbase_legacy_gpu_core_props core_props;
+	struct mali_base_gpu_l2_cache_props l2_props;
+	u64 unused_1;
+	struct mali_base_gpu_tiler_props tiler_props;
+	struct mali_base_gpu_thread_props thread_props;
+	struct kbase_legacy_gpu_raw_props raw_props;
+	struct mali_base_gpu_coherent_group_info coherency_info;
+};
+
+struct kbase_legacy_gpuprops {
+	union kbase_legacy_uk_header header;
+	struct kbase_legacy_gpu_props props;
+};
+
+struct kbase_legacy_mem_query {
+	union kbase_legacy_uk_header header;
+	u64 gpu_addr;
+	u64 query;
+	u64 value;
+};
+
+struct kbase_legacy_mem_commit {
+	union kbase_legacy_uk_header header;
+	u64 gpu_addr;
+	u64 pages;
+	u32 result_subcode;
+	u32 padding;
+};
+
+struct kbase_legacy_set_flags {
+	union kbase_legacy_uk_header header;
+	u32 create_flags;
+	u32 padding;
+};
+
+struct kbase_legacy_fence_validate {
+	union kbase_legacy_uk_header header;
+	s32 fd;
+	u32 padding;
+};
+
+struct kbase_legacy_stream_create {
+	union kbase_legacy_uk_header header;
+	char name[32];
+	s32 fd;
+	u32 padding;
+};
+
+struct kbase_legacy_context_id {
+	union kbase_legacy_uk_header header;
+	s32 id;
+};
+
 enum {
 	inited_mem = (1u << 0),
 	inited_js = (1u << 1),
@@ -1064,6 +1260,598 @@ static int kbase_api_tlstream_stats(struct kbase_context *kctx,
 }
 #endif /* MALI_UNIT_TEST */
 
+
+static void kbase_legacy_fill_gpu_props(struct kbase_context *kctx,
+		struct kbase_legacy_gpu_props *legacy)
+{
+	struct kbase_device *kbdev = kctx->kbdev;
+	const base_gpu_props *props = &kbdev->gpu_props.props;
+	u32 gpu_speed_mhz;
+
+	memset(legacy, 0, sizeof(*legacy));
+
+	legacy->core_props.product_id = props->core_props.product_id;
+	legacy->core_props.version_status = props->core_props.version_status;
+	legacy->core_props.minor_revision = props->core_props.minor_revision;
+	legacy->core_props.major_revision = props->core_props.major_revision;
+
+	/*
+	 * Preserve the r15p0 Exynos property contract seen by the Sailfish
+	 * userspace DDK.  The native r22p0 property block can contain the
+	 * platform's real operating frequency, while r15p0 on treltexx
+	 * reports the legacy platform constants (5 MHz / 5000 kHz).
+	 */
+#ifdef GPU_FREQ_KHZ_MAX
+	legacy->core_props.gpu_freq_khz_max = GPU_FREQ_KHZ_MAX;
+#else
+	legacy->core_props.gpu_freq_khz_max =
+			props->core_props.gpu_freq_khz_max;
+#endif
+#ifdef GPU_FREQ_KHZ_MIN
+	legacy->core_props.gpu_freq_khz_min = GPU_FREQ_KHZ_MIN;
+#else
+	legacy->core_props.gpu_freq_khz_min =
+			legacy->core_props.gpu_freq_khz_max;
+#endif
+	gpu_speed_mhz = legacy->core_props.gpu_freq_khz_max / 1000;
+	legacy->core_props.gpu_speed_mhz = gpu_speed_mhz;
+	legacy->core_props.log2_program_counter_size =
+			props->core_props.log2_program_counter_size;
+	memcpy(legacy->core_props.texture_features,
+			props->core_props.texture_features,
+			sizeof(legacy->core_props.texture_features));
+	legacy->core_props.gpu_available_memory_size =
+			props->core_props.gpu_available_memory_size;
+
+	legacy->l2_props = props->l2_props;
+	legacy->unused_1 = props->unused_1;
+	legacy->tiler_props = props->tiler_props;
+	legacy->thread_props = props->thread_props;
+
+	legacy->raw_props.shader_present = props->raw_props.shader_present;
+	legacy->raw_props.tiler_present = props->raw_props.tiler_present;
+	legacy->raw_props.l2_present = props->raw_props.l2_present;
+#ifdef CONFIG_MALI_CORESTACK
+	legacy->raw_props.stack_present = props->raw_props.stack_present;
+#else
+	/* r15p0 deliberately hides core-stack presence when disabled. */
+	legacy->raw_props.stack_present = 0;
+#endif
+	legacy->raw_props.l2_features = props->raw_props.l2_features;
+	legacy->raw_props.suspend_size = props->raw_props.suspend_size;
+	legacy->raw_props.mem_features = props->raw_props.mem_features;
+	legacy->raw_props.mmu_features = props->raw_props.mmu_features;
+	legacy->raw_props.as_present = props->raw_props.as_present;
+	legacy->raw_props.js_present = props->raw_props.js_present;
+	memcpy(legacy->raw_props.js_features, props->raw_props.js_features,
+			sizeof(legacy->raw_props.js_features));
+	legacy->raw_props.tiler_features = props->raw_props.tiler_features;
+	memcpy(legacy->raw_props.texture_features,
+			props->raw_props.texture_features,
+			sizeof(legacy->raw_props.texture_features));
+	legacy->raw_props.gpu_id = props->raw_props.gpu_id;
+	legacy->raw_props.thread_max_threads =
+			props->raw_props.thread_max_threads;
+	legacy->raw_props.thread_max_workgroup_size =
+			props->raw_props.thread_max_workgroup_size;
+	legacy->raw_props.thread_max_barrier_size =
+			props->raw_props.thread_max_barrier_size;
+	legacy->raw_props.thread_features =
+			props->raw_props.thread_features;
+	legacy->raw_props.coherency_mode = props->raw_props.coherency_mode;
+
+	legacy->coherency_info = props->coherency_info;
+}
+
+static void kbase_legacy_set_result(union kbase_legacy_uk_header *header,
+		int err)
+{
+	header->ret = err ? MALI_ERROR_FUNCTION_FAILED : MALI_ERROR_NONE;
+}
+
+#define KBASE_LEGACY_TRACE_MEM_ALLOC_OK_LIMIT	32
+#define KBASE_LEGACY_TRACE_MEM_IMPORT_OK_LIMIT	8
+#define KBASE_LEGACY_TRACE_MEM_COMMIT_OK_LIMIT	8
+#define KBASE_LEGACY_TRACE_MEM_QUERY_OK_LIMIT	24
+#define KBASE_LEGACY_TRACE_FENCE_OK_LIMIT	8
+#define KBASE_LEGACY_TRACE_STREAM_OK_LIMIT	4
+#define KBASE_LEGACY_TRACE_JOB_OK_LIMIT	32
+#define KBASE_LEGACY_TRACE_ERROR_LIMIT		64
+
+static atomic_t kbase_legacy_trace_mem_alloc_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_mem_import_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_mem_commit_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_mem_query_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_fence_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_stream_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_job_ok = ATOMIC_INIT(0);
+static atomic_t kbase_legacy_trace_error = ATOMIC_INIT(0);
+
+static bool kbase_legacy_trace_error_allowed(void)
+{
+	return atomic_inc_return(&kbase_legacy_trace_error) <=
+			KBASE_LEGACY_TRACE_ERROR_LIMIT;
+}
+
+static int kbase_legacy_dispatch(struct kbase_context *kctx,
+		void *args, u32 args_size)
+{
+	union kbase_legacy_uk_header *header = args;
+	u32 id = header->id;
+	int err;
+
+	header->ret = MALI_ERROR_NONE;
+
+	if (id == KBASE_LEGACY_UKP_FUNC_ID_CHECK_VERSION) {
+		struct kbase_legacy_version_check *version = args;
+
+		if (args_size != sizeof(*version))
+			return -EINVAL;
+
+		if (version->major == KBASE_LEGACY_UK_VERSION_MAJOR)
+			version->minor = min_t(int,
+					KBASE_LEGACY_UK_VERSION_MINOR,
+					(int)version->minor);
+		else {
+			version->major = KBASE_LEGACY_UK_VERSION_MAJOR;
+			version->minor = KBASE_LEGACY_UK_VERSION_MINOR;
+		}
+
+		kctx->api_version = KBASE_API_VERSION(version->major,
+				version->minor);
+		return 0;
+	}
+
+	if (kctx->api_version == 0)
+		return -EINVAL;
+
+	if (!atomic_read(&kctx->setup_complete)) {
+		struct kbase_legacy_set_flags *flags = args;
+
+		if (atomic_cmpxchg(&kctx->setup_in_progress, 0, 1) != 0)
+			return -EINVAL;
+
+		if (id != KBASE_LEGACY_FUNC_SET_FLAGS)
+			return -EINVAL;
+
+		if (args_size != sizeof(*flags))
+			return -EINVAL;
+
+		err = kbase_context_set_create_flags(kctx,
+				flags->create_flags);
+		kbase_legacy_set_result(header, err);
+		dev_info(kctx->kbdev->dev,
+				"legacy r15 SET_FLAGS flags=0x%x err=%d ret=%u\n",
+				flags->create_flags, err, header->ret);
+
+		/* Match the r15p0 setup semantics. */
+		atomic_set(&kctx->setup_complete, 1);
+		return 0;
+	}
+
+	switch (id) {
+	case KBASE_LEGACY_FUNC_MEM_ALLOC:
+	{
+		struct kbase_legacy_mem_alloc *legacy = args;
+		union kbase_ioctl_mem_alloc alloc;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		memset(&alloc, 0, sizeof(alloc));
+		alloc.in.va_pages = legacy->va_pages;
+		alloc.in.commit_pages = legacy->commit_pages;
+		alloc.in.extent = legacy->extent;
+		alloc.in.flags = legacy->flags;
+
+		err = kbase_api_mem_alloc(kctx, &alloc);
+		if (!err) {
+			legacy->flags = alloc.out.flags;
+			legacy->gpu_va = alloc.out.gpu_va;
+			legacy->va_alignment = 0;
+		}
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 MEM_ALLOC FAIL va=%llu commit=%llu extent=%llu flags=0x%llx err=%d ret=%u\n",
+						(unsigned long long)legacy->va_pages,
+						(unsigned long long)legacy->commit_pages,
+						(unsigned long long)legacy->extent,
+						(unsigned long long)alloc.in.flags,
+						err, header->ret);
+		} else if (atomic_inc_return(&kbase_legacy_trace_mem_alloc_ok) <=
+				KBASE_LEGACY_TRACE_MEM_ALLOC_OK_LIMIT) {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 MEM_ALLOC OK va=%llu commit=%llu extent=%llu in_flags=0x%llx out_flags=0x%llx gpu_va=0x%llx\n",
+					(unsigned long long)legacy->va_pages,
+					(unsigned long long)legacy->commit_pages,
+					(unsigned long long)legacy->extent,
+					(unsigned long long)alloc.in.flags,
+					(unsigned long long)legacy->flags,
+					(unsigned long long)legacy->gpu_va);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_MEM_IMPORT:
+	{
+		struct kbase_legacy_mem_import *legacy = args;
+		union kbase_ioctl_mem_import import;
+		u64 legacy_import_flags;
+		u32 legacy_import_type;
+		u32 legacy_import_phandle;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		legacy_import_flags = legacy->flags;
+		legacy_import_type = legacy->type;
+		legacy_import_phandle = legacy->phandle.value;
+
+		memset(&import, 0, sizeof(import));
+		import.in.flags = legacy_import_flags;
+		import.in.phandle = (u64)legacy_import_phandle;
+		import.in.type = legacy_import_type;
+		/* r15p0 did not pass padding to kbase_mem_import(). */
+		import.in.padding = 0;
+
+		err = kbase_api_mem_import(kctx, &import);
+		if (!err) {
+			legacy->flags = import.out.flags;
+			legacy->gpu_va = import.out.gpu_va;
+			legacy->va_pages = import.out.va_pages;
+		} else {
+			legacy->type = BASE_MEM_IMPORT_TYPE_INVALID;
+		}
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 MEM_IMPORT FAIL phandle=0x%x type=%u flags=0x%llx err=%d ret=%u\n",
+						legacy_import_phandle, legacy_import_type,
+						(unsigned long long)legacy_import_flags,
+						err, header->ret);
+		} else if (atomic_inc_return(&kbase_legacy_trace_mem_import_ok) <=
+				KBASE_LEGACY_TRACE_MEM_IMPORT_OK_LIMIT) {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 MEM_IMPORT OK phandle=0x%x type=%u in_flags=0x%llx out_flags=0x%llx gpu_va=0x%llx pages=%llu\n",
+					legacy_import_phandle, legacy_import_type,
+					(unsigned long long)legacy_import_flags,
+					(unsigned long long)legacy->flags,
+					(unsigned long long)legacy->gpu_va,
+					(unsigned long long)legacy->va_pages);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_MEM_COMMIT:
+	{
+		struct kbase_legacy_mem_commit *legacy = args;
+		struct kbase_ioctl_mem_commit commit;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		commit.gpu_addr = legacy->gpu_addr;
+		commit.pages = legacy->pages;
+		err = kbase_api_mem_commit(kctx, &commit);
+
+		if (!err)
+			legacy->result_subcode = BASE_BACKING_THRESHOLD_OK;
+		else if (err == -ENOMEM)
+			legacy->result_subcode =
+				(u32)BASE_BACKING_THRESHOLD_ERROR_OOM;
+		else
+			legacy->result_subcode =
+				(u32)BASE_BACKING_THRESHOLD_ERROR_INVALID_ARGUMENTS;
+
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 MEM_COMMIT FAIL gpu=0x%llx pages=%llu subcode=%u err=%d ret=%u\n",
+						(unsigned long long)legacy->gpu_addr,
+						(unsigned long long)legacy->pages,
+						legacy->result_subcode, err, header->ret);
+		} else if (atomic_inc_return(&kbase_legacy_trace_mem_commit_ok) <=
+				KBASE_LEGACY_TRACE_MEM_COMMIT_OK_LIMIT) {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 MEM_COMMIT OK gpu=0x%llx pages=%llu subcode=%u\n",
+					(unsigned long long)legacy->gpu_addr,
+					(unsigned long long)legacy->pages,
+					legacy->result_subcode);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_MEM_QUERY:
+	{
+		struct kbase_legacy_mem_query *legacy = args;
+		union kbase_ioctl_mem_query query;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		memset(&query, 0, sizeof(query));
+		query.in.gpu_addr = legacy->gpu_addr;
+		query.in.query = legacy->query;
+		err = kbase_api_mem_query(kctx, &query);
+		if (!err)
+			legacy->value = query.out.value;
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 MEM_QUERY FAIL gpu=0x%llx query=%llu err=%d ret=%u\n",
+						(unsigned long long)legacy->gpu_addr,
+						(unsigned long long)legacy->query,
+						err, header->ret);
+		} else if (atomic_inc_return(&kbase_legacy_trace_mem_query_ok) <=
+				KBASE_LEGACY_TRACE_MEM_QUERY_OK_LIMIT) {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 MEM_QUERY OK gpu=0x%llx query=%llu value=0x%llx\n",
+					(unsigned long long)legacy->gpu_addr,
+					(unsigned long long)legacy->query,
+					(unsigned long long)legacy->value);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_MEM_FREE:
+	{
+		struct kbase_legacy_mem_free *legacy = args;
+		struct kbase_ioctl_mem_free free;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		free.gpu_addr = legacy->gpu_addr;
+		err = kbase_api_mem_free(kctx, &free);
+		kbase_legacy_set_result(header, err);
+		if (err && kbase_legacy_trace_error_allowed())
+			dev_err(kctx->kbdev->dev,
+					"legacy r15 MEM_FREE FAIL gpu=0x%llx err=%d ret=%u\n",
+					(unsigned long long)legacy->gpu_addr,
+					err, header->ret);
+		break;
+	}
+	case KBASE_LEGACY_FUNC_SYNC:
+	{
+		struct kbase_legacy_sync_now *legacy = args;
+		struct kbase_ioctl_mem_sync sync;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		memset(&sync, 0, sizeof(sync));
+		sync.handle =
+			legacy->sset.basep_sset.mem_handle.basep.handle;
+		sync.user_addr = legacy->sset.basep_sset.user_addr;
+		sync.size = legacy->sset.basep_sset.size;
+		sync.type = legacy->sset.basep_sset.type;
+
+		err = kbase_api_mem_sync(kctx, &sync);
+		kbase_legacy_set_result(header, err);
+		if (err && kbase_legacy_trace_error_allowed())
+			dev_err(kctx->kbdev->dev,
+					"legacy r15 SYNC FAIL handle=0x%llx user=0x%llx size=%llu type=%u err=%d ret=%u\n",
+					(unsigned long long)sync.handle,
+					(unsigned long long)sync.user_addr,
+					(unsigned long long)sync.size,
+					(unsigned int)sync.type,
+					err, header->ret);
+		break;
+	}
+	case KBASE_LEGACY_FUNC_GPU_PROPS_REG_DUMP:
+	{
+		struct kbase_legacy_gpuprops *legacy = args;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		kbase_legacy_fill_gpu_props(kctx, &legacy->props);
+		dev_info(kctx->kbdev->dev,
+				"legacy r15 gpuprops: product=0x%x r%up%u status=%u speed=%uMHz freq=%u/%u kHz shader=0x%llx stack=0x%llx\n",
+				legacy->props.core_props.product_id,
+				legacy->props.core_props.major_revision,
+				legacy->props.core_props.minor_revision,
+				legacy->props.core_props.version_status,
+				legacy->props.core_props.gpu_speed_mhz,
+				legacy->props.core_props.gpu_freq_khz_max,
+				legacy->props.core_props.gpu_freq_khz_min,
+				(unsigned long long)legacy->props.raw_props.shader_present,
+				(unsigned long long)legacy->props.raw_props.stack_present);
+		break;
+	}
+	case KBASE_LEGACY_FUNC_FENCE_VALIDATE:
+	{
+		struct kbase_legacy_fence_validate *legacy = args;
+		struct kbase_ioctl_fence_validate validate;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		validate.fd = legacy->fd;
+		err = kbase_api_fence_validate(kctx, &validate);
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 FENCE_VALIDATE FAIL fd=%d err=%d ret=%u\n",
+						legacy->fd, err, header->ret);
+		} else if (atomic_inc_return(&kbase_legacy_trace_fence_ok) <=
+				KBASE_LEGACY_TRACE_FENCE_OK_LIMIT) {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 FENCE_VALIDATE OK fd=%d\n",
+					legacy->fd);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_STREAM_CREATE:
+	{
+		struct kbase_legacy_stream_create *legacy = args;
+		struct kbase_ioctl_stream_create stream;
+		size_t name_len;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		/*
+		 * r15p0 accepts any NUL-terminated name in the 32-byte field.
+		 * r22p0 additionally requires the unused bytes to be zero-padded
+		 * (and rejects a non-zero final byte). Normalize only the padding
+		 * while preserving the r15p0 validity rule.
+		 */
+		name_len = strnlen(legacy->name, sizeof(legacy->name));
+		if (name_len >= sizeof(legacy->name)) {
+			header->ret = MALI_ERROR_FUNCTION_FAILED;
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 STREAM_CREATE FAIL unterminated name ret=%u\n",
+						header->ret);
+			break;
+		}
+
+		memset(&stream, 0, sizeof(stream));
+		memcpy(stream.name, legacy->name, name_len);
+
+		err = kbase_api_stream_create(kctx, &stream);
+		if (err < 0) {
+			kbase_legacy_set_result(header, err);
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 STREAM_CREATE FAIL len=%u err=%d ret=%u\n",
+						(unsigned int)name_len, err, header->ret);
+		} else {
+			legacy->fd = err;
+			header->ret = MALI_ERROR_NONE;
+			if (atomic_inc_return(&kbase_legacy_trace_stream_ok) <=
+					KBASE_LEGACY_TRACE_STREAM_OK_LIMIT)
+				dev_info(kctx->kbdev->dev,
+						"legacy r15 STREAM_CREATE OK len=%u fd=%d\n",
+						(unsigned int)name_len, legacy->fd);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_JOB_SUBMIT:
+	{
+		struct kbase_legacy_job_submit *legacy = args;
+		struct kbase_ioctl_job_submit submit;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		submit.addr = (u64)legacy->addr.value;
+		submit.nr_atoms = legacy->nr_atoms;
+		submit.stride = legacy->stride;
+
+		err = kbase_api_job_submit(kctx, &submit);
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 JOB_SUBMIT FAIL addr=0x%x atoms=%u stride=%u err=%d ret=%u\n",
+						legacy->addr.value, legacy->nr_atoms,
+						legacy->stride, err, header->ret);
+		} else if (atomic_inc_return(&kbase_legacy_trace_job_ok) <=
+				KBASE_LEGACY_TRACE_JOB_OK_LIMIT) {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 JOB_SUBMIT OK addr=0x%x atoms=%u stride=%u\n",
+					legacy->addr.value, legacy->nr_atoms,
+					legacy->stride);
+		}
+		break;
+	}
+	case KBASE_LEGACY_FUNC_GET_CONTEXT_ID:
+	{
+		struct kbase_legacy_context_id *legacy = args;
+		struct kbase_ioctl_get_context_id info;
+
+		if (args_size != sizeof(*legacy))
+			return -EINVAL;
+
+		err = kbase_api_get_context_id(kctx, &info);
+		if (!err)
+			legacy->id = info.id;
+		kbase_legacy_set_result(header, err);
+		if (err) {
+			if (kbase_legacy_trace_error_allowed())
+				dev_err(kctx->kbdev->dev,
+						"legacy r15 GET_CONTEXT_ID FAIL err=%d ret=%u\n",
+						err, header->ret);
+		} else {
+			dev_info(kctx->kbdev->dev,
+					"legacy r15 GET_CONTEXT_ID OK id=%d\n",
+					legacy->id);
+		}
+		break;
+	}
+	default:
+		dev_err(kctx->kbdev->dev,
+				"Unsupported legacy r15p0 ioctl id %u\n", id);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static long kbase_legacy_ioctl(struct kbase_context *kctx,
+		unsigned int cmd, unsigned long arg)
+{
+	u64 msg[(KBASE_LEGACY_MAX_CALL_SIZE + 7) >> 3] = { 0 };
+	void __user *uarg = (void __user *)arg;
+	u32 size = _IOC_SIZE(cmd);
+
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_version_check) != 16);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_mem_alloc) != 56);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_mem_import) != 48);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_mem_commit) != 32);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_mem_query) != 32);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_mem_free) != 16);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_sync_now) != 40);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_gpu_props) != 528);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_gpuprops) != 536);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_set_flags) != 16);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_fence_validate) != 16);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_stream_create) != 48);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_job_submit) != 40);
+	BUILD_BUG_ON(sizeof(struct kbase_legacy_context_id) != 16);
+
+	if (size > KBASE_LEGACY_MAX_CALL_SIZE ||
+			size < sizeof(union kbase_legacy_uk_header))
+		return -ENOTTY;
+
+	if (copy_from_user(msg, uarg, size))
+		return -EFAULT;
+
+	{
+		int err = kbase_legacy_dispatch(kctx, msg, size);
+
+		if (err) {
+			dev_err(kctx->kbdev->dev,
+					"legacy r15 dispatcher rejected cmd=0x%x id=%u size=%u err=%d\n",
+					cmd, ((union kbase_legacy_uk_header *)msg)->id,
+					size, err);
+			return -EFAULT;
+		}
+	}
+
+	if (copy_to_user(uarg, msg, size))
+		return -EFAULT;
+
+	return 0;
+}
+
+static bool kbase_is_legacy_ioctl(unsigned int cmd)
+{
+	if (_IOC_TYPE(cmd) == KBASE_LEGACY_IOCTL_TYPE)
+		return true;
+
+	if (_IOC_TYPE(cmd) == KBASE_LEGACY_VERSION_IOCTL_TYPE &&
+			_IOC_NR(cmd) == 0 &&
+			_IOC_SIZE(cmd) == sizeof(struct kbase_legacy_version_check))
+		return true;
+
+	return false;
+}
+
 #define KBASE_HANDLE_IOCTL(cmd, function)                          \
 	case cmd:                                                  \
 	do {                                                       \
@@ -1120,6 +1908,9 @@ static long kbase_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	struct kbase_context *kctx = filp->private_data;
 	struct kbase_device *kbdev = kctx->kbdev;
 	void __user *uarg = (void __user *)arg;
+
+	if (kbase_is_legacy_ioctl(cmd))
+		return kbase_legacy_ioctl(kctx, cmd, arg);
 
 	/* Only these ioctls are available until setup is complete */
 	switch (cmd) {
